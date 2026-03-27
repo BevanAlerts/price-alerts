@@ -1,0 +1,11 @@
+# Price Alert Watchlist
+# Format: TICKER, LEVEL, DIRECTION, NOTE (note is optional)
+# DIRECTION must be: above  or  below
+# Lines starting with # are ignored
+#
+# Examples:
+# CTRA, 33.60, below, Support level break
+# XLI, 45.50, above, Breakout entry trigger
+# ERX, 95.00, below, Chandelier stop
+#
+# Add your alerts below this line:
