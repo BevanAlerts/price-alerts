@@ -9,3 +9,4 @@
 # ERX, 95.00, below, Chandelier stop
 #
 # Add your alerts below this line:
+SPY, 1.00, above, Test notification
