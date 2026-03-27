@@ -19,7 +19,7 @@ WATCHLIST_FILE = "watchlist.csv"
 TRIGGERED_FILE = "triggered.json"
 
 US Market hours in UTC
-Pre-market open:   4:00am ET = 09:00 UTC
+# Pre-market open:   4:00am ET = 09:00 UTC
 Post-market close: 8:00pm ET = 01:00 UTC (next day)
 MARKET_START_UTC = 9   # 09:00 UTC = 4:00am ET
 MARKET_END_UTC   = 1   # 01:00 UTC = 8:00pm ET
