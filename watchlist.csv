@@ -9,4 +9,8 @@
 # ERX, 95.00, below, Chandelier stop
 #
 # Add your alerts below this line:
-SPY, 1.00, above, Test notification
+EYE, 29.55, above, breakout above level
+AMSC, 34.65, above, breakout above level
+FLY, 28.34, above, breakout above level
+MDU, 21.35, above, breakout above level
+WEAT, 23.75, above, breakout
