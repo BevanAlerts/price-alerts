@@ -2,9 +2,9 @@ name: Price Alerts
 
 on:
   schedule:
-    - cron: '*/5 9-23 * * 1-5'   # Every 5 min, 9am-11pm UTC, Mon-Fri
-    - cron: '*/5 0 * * 2-6'      # Every 5 min, midnight-1am UTC, Tue-Sat
-  workflow_dispatch:               # Allow manual trigger for testing
+    - cron: '*/5 9-23 * * 1-5'
+    - cron: '*/5 0 * * 2-6'
+  workflow_dispatch:
 
 concurrency:
   group: price-alerts
@@ -13,8 +13,6 @@ concurrency:
 jobs:
   check-prices:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
@@ -27,13 +25,3 @@ jobs:
 
       - name: Run price alert script
         run: python price_alerts.py
-
-      - name: Save triggered state
-        if: always()
-        run: |
-          git config user.name "Price Alert Bot"
-          git config user.email "alerts@noreply.com"
-          git pull --rebase
-          git add triggered.json
-          git diff --staged --quiet || git commit -m "Update triggered alerts state"
-          git push
