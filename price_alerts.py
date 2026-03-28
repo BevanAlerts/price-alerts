@@ -1,28 +1,22 @@
 """
-Price Alert Script for GitHub Actions
-Monitors watchlist.csv and sends Ntfy notifications when price levels are crossed.
-Runs every 5 minutes via GitHub Actions scheduled workflow.
-Persists triggered alerts by committing triggered.json back to the repository.
+Price Alert Script for GitHub Actions v2
+- No file persistence needed
+- Uses Ntfy message ID for deduplication
+- Simpler and more reliable
 """
 
 import csv
 import json
 import os
 import urllib.request
-import urllib.error
 from datetime import datetime, timezone
 
-# ─── CONFIGURATION ────────────────────────────────────────────────────────────
-NTFY_TOPIC     = "bevan-rotation-alerts"
-NTFY_SERVER    = "https://ntfy.sh"
+NTFY_TOPIC = "bevan-rotation-alerts"
+NTFY_SERVER = "https://ntfy.sh"
 WATCHLIST_FILE = "watchlist.csv"
-TRIGGERED_FILE = "triggered.json"
 
-US Market hours in UTC
-# Pre-market open:   4:00am ET = 09:00 UTC
-Post-market close: 8:00pm ET = 01:00 UTC (next day)
-MARKET_START_UTC = 9   # 09:00 UTC = 4:00am ET
-MARKET_END_UTC   = 1   # 01:00 UTC = 8:00pm ET
+MARKET_START_UTC = 9
+MARKET_END_UTC = 1
 
 
 def is_market_hours():
@@ -41,50 +35,23 @@ def load_watchlist():
             if not row or row[0].strip().startswith("#"):
                 continue
             if len(row) < 3:
-                print(f"  Skipping line {i} — needs TICKER, LEVEL, DIRECTION")
                 continue
             ticker = row[0].strip().upper()
             try:
                 level = float(row[1].strip())
             except ValueError:
-                print(f"  Skipping line {i} — invalid level '{row[1].strip()}'")
                 continue
             direction = row[2].strip().lower()
             if direction not in ("above", "below"):
-                print(f"  Skipping line {i} — direction must be above or below")
                 continue
             note = row[3].strip() if len(row) >= 4 else ""
             alerts.append({
-                "ticker":    ticker,
-                "level":     level,
+                "ticker": ticker,
+                "level": level,
                 "direction": direction,
-                "note":      note,
-                "key":       f"{ticker}_{level}_{direction}"
+                "note": note,
             })
     return alerts
-
-
-def load_triggered():
-    if not os.path.exists(TRIGGERED_FILE):
-        return {}
-    with open(TRIGGERED_FILE) as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
-
-
-def save_triggered(triggered):
-    with open(TRIGGERED_FILE, "w") as f:
-        json.dump(triggered, f, indent=2)
-
-
-def reset_if_new_day(triggered):
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    if triggered.get("_date") != today:
-        print(f"  New trading day ({today}) — resetting triggered alerts.")
-        return {"_date": today}
-    return triggered
 
 
 def get_price(ticker):
@@ -102,19 +69,27 @@ def get_price(ticker):
 
 
 def send_ntfy(ticker, price, level, direction, note):
-    arrow   = "up" if direction == "above" else "down"
-    title   = f"Price Alert: {ticker} {arrow}"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Use a unique message ID per ticker/level/direction/day
+    # Ntfy will deduplicate messages with the same ID sent on the same day
+    msg_id = f"{ticker}-{level}-{direction}-{today}".replace(".", "_")
+
+    arrow = "up" if direction == "above" else "down"
+    title = f"Price Alert: {ticker} {arrow}"
     crossed = "crossed above" if direction == "above" else "crossed below"
-    body    = f"{ticker} has {crossed} ${level:.2f}\nCurrent price: ${price:.2f}"
+    body = f"{ticker} has {crossed} ${level:.2f}\nCurrent price: ${price:.2f}"
     if note:
         body += f"\nNote: {note}"
     body += f"\nTime: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
 
-    url  = f"{NTFY_SERVER}/{NTFY_TOPIC}"
-    data = body.encode("utf-8")
-    req  = urllib.request.Request(
-        url, data=data, method="POST",
-        headers={"Title": title, "Priority": "high"}
+    url = f"{NTFY_SERVER}/{NTFY_TOPIC}"
+    req = urllib.request.Request(
+        url, data=body.encode("utf-8"), method="POST",
+        headers={
+            "Title": title,
+            "Priority": "high",
+            "X-ID": msg_id,
+        }
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -123,7 +98,7 @@ def send_ntfy(ticker, price, level, direction, note):
             else:
                 print(f"  Ntfy returned status {resp.status}")
     except Exception as e:
-        print(f"  ERROR sending Ntfy notification: {e}")
+        print(f"  ERROR sending Ntfy: {e}")
 
 
 def run():
@@ -136,27 +111,18 @@ def run():
         print("Outside market hours. Skipping.")
         return
 
-    alerts    = load_watchlist()
-    triggered = load_triggered()
-    triggered = reset_if_new_day(triggered)
-
+    alerts = load_watchlist()
     if not alerts:
         print("Watchlist is empty.")
-        save_triggered(triggered)
         return
 
     print(f"Checking {len(alerts)} alert(s)...\n")
 
     for alert in alerts:
-        ticker    = alert["ticker"]
-        level     = alert["level"]
+        ticker = alert["ticker"]
+        level = alert["level"]
         direction = alert["direction"]
-        note      = alert["note"]
-        key       = alert["key"]
-
-        if triggered.get(key):
-            print(f"  {ticker} @ ${level} ({direction}) -- already triggered today.")
-            continue
+        note = alert["note"]
 
         price = get_price(ticker)
         if price is None:
@@ -173,9 +139,7 @@ def run():
         if fired:
             print(f"  >>> TRIGGERED: {ticker} {direction} ${level:.2f}")
             send_ntfy(ticker, price, level, direction, note)
-            triggered[key] = {"price": price, "triggered": now_str}
 
-    save_triggered(triggered)
     print("\nDone.")
 
 
