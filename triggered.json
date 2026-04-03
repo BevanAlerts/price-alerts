@@ -1,19 +1,15 @@
 {
-  "_date": "2026-04-02",
-  "FLY_28.34_above": {
-    "price": 29.76,
-    "triggered": "2026-04-02 11:34 UTC"
-  },
+  "_date": "2026-04-03",
   "XLE_62.5_below": {
-    "price": 58.97,
-    "triggered": "2026-04-02 11:34 UTC"
+    "price": 59.25,
+    "triggered": "2026-04-03 00:04 UTC"
   },
   "CPER_34.2_above": {
-    "price": 34.34,
-    "triggered": "2026-04-02 11:34 UTC"
+    "price": 34.37,
+    "triggered": "2026-04-03 00:04 UTC"
   },
   "GEVO_2.62_below": {
-    "price": 2.395,
-    "triggered": "2026-04-02 11:34 UTC"
+    "price": 2.295,
+    "triggered": "2026-04-03 00:04 UTC"
   }
 }
