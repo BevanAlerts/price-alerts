@@ -2,7 +2,7 @@ name: Price Alerts
 
 on:
   schedule:
-    - cron: '*/5 9-23 * * 1-5'
+    - cron: '*/5 8-23 * * 1-5'
     - cron: '*/5 0 * * 2-6'
   workflow_dispatch:
 
