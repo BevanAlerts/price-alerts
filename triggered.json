@@ -1,15 +1,15 @@
 {
-  "_date": "2026-04-03",
+  "_date": "2026-04-04",
   "XLE_62.5_below": {
     "price": 59.25,
-    "triggered": "2026-04-03 00:04 UTC"
+    "triggered": "2026-04-04 00:02 UTC"
   },
   "CPER_34.2_above": {
     "price": 34.37,
-    "triggered": "2026-04-03 00:04 UTC"
+    "triggered": "2026-04-04 00:02 UTC"
   },
   "GEVO_2.62_below": {
     "price": 2.295,
-    "triggered": "2026-04-03 00:04 UTC"
+    "triggered": "2026-04-04 00:02 UTC"
   }
 }
