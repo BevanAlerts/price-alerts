@@ -7,18 +7,31 @@ Uses triggered.json to ensure each alert only fires once per trading day.
 import csv
 import json
 import os
-import urllib.request
-from datetime import datetime, timezone
+import sys
+from datetime import datetime, timezone, date
 
 NTFY_TOPIC     = "bevan-rotation-alerts"
 NTFY_SERVER    = "https://ntfy.sh"
 WATCHLIST_FILE = "watchlist.csv"
 TRIGGERED_FILE = "triggered.json"
+US_MARKET_HOLIDAYS_2026 = {
+    date(2026, 1, 1),
+    date(2026, 1, 19),
+    date(2026, 2, 16),
+    date(2026, 4, 3),
+    date(2026, 5, 25),
+    date(2026, 7, 3),
+    date(2026, 9, 7),
+    date(2026, 11, 26),
+    date(2026, 12, 25),
+}
 
-# US market window in UTC
-# Pre-market open:   4:00am ET = 09:00 UTC
-# Post-market close: 8:00pm ET = 00:00 UTC next day
-MARKET_START_UTC = 9
+today = date.today()
+if today in US_MARKET_HOLIDAYS_2026:
+    print(f"Market holiday today ({today}). Skipping.")
+    sys.exit(0)
+    
+MARKET_START_UTC = 8
 MARKET_END_UTC   = 1
 
 
