@@ -17,15 +17,9 @@ NZ_TZ = ZoneInfo("Pacific/Auckland")
 US_TZ = ZoneInfo("America/New_York")
 
 US_MARKET_HOLIDAYS_2026 = {
-    date(2026, 1, 1),
-    date(2026, 1, 19),
-    date(2026, 2, 16),
-    date(2026, 4, 3),
-    date(2026, 5, 25),
-    date(2026, 7, 3),
-    date(2026, 9, 7),
-    date(2026, 11, 26),
-    date(2026, 12, 25),
+    date(2026, 1, 1), date(2026, 1, 19), date(2026, 2, 16),
+    date(2026, 4, 3), date(2026, 5, 25), date(2026, 7, 3),
+    date(2026, 9, 7), date(2026, 11, 26), date(2026, 12, 25),
 }
 
 def in_alert_window():
@@ -96,13 +90,13 @@ def reset_if_new_day(triggered):
         return {"_date": today}
     return triggered
 
-def get_price(ticker, retries=3, delay=2):
+def get_price(ticker, retries=10, delay=3):  # More retries, longer delay
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=1d"
     headers = {"User-Agent": "Mozilla/5.0"}
 
     for attempt in range(1, retries + 1):
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=15)
             if response.status_code != 200:
                 raise Exception(f"HTTP {response.status_code}")
 
@@ -116,11 +110,11 @@ def get_price(ticker, retries=3, delay=2):
 
             raise Exception("Price not found in response")
         except Exception as e:
-            print(f"Attempt {attempt} failed for {ticker}: {e}")
+            print(f"Attempt {attempt}/{retries} failed for {ticker}: {e}")
             if attempt < retries:
                 time.sleep(delay)
 
-    print(f"FINAL FAIL: Could not fetch price for {ticker} after {retries} attempts.")
+    print(f"FINAL FAIL: Could not fetch {ticker} after {retries} attempts.")
     return None
 
 def send_ntfy(ticker, price, level, direction, note):
@@ -192,7 +186,7 @@ def run():
 
         price = get_price(ticker)
         if price is None:
-            print(f"{ticker} - skipped (price fetch failed).")
+            print(f"{ticker} - skipped (price fetch failed after retries).")
             continue
 
         print(f"{ticker}: ${price:.2f} | alert ${level:.2f} {direction}")
