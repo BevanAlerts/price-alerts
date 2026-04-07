@@ -29,13 +29,15 @@ jobs:
       - name: Run price alert script
         run: python price_alerts.py
 
-      - name: Save triggered state
-        if: always()
-        run: |
-          git config user.name "Price Alert Bot"
-          git config user.email "alerts@noreply.com"
-          git fetch origin main
-          git reset --hard origin/main
-          git add triggered.json
-          git diff --staged --quiet || git commit -m "Update triggered alerts state"
-          git push origin HEAD:main
+      - - name: Save triggered state
+  run: |
+    git config user.name "Price Alert Bot"
+    git config user.email "actions@github.com"
+
+    git add triggered.json
+
+    git commit -m "Update triggered alerts" || echo "No changes"
+
+    git pull --rebase origin main || echo "Nothing to pull"
+
+    git push || echo "Nothing to push"
