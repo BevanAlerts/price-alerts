@@ -15,8 +15,9 @@ jobs:
     permissions:
       contents: read
     env:
-      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-      NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
+      env:
+  NTFY_TOPIC: bevan-rotation-alerts
+  NTFY_SERVER: https://ntfy.sh
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
