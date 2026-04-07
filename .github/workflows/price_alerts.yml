@@ -14,14 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     env:
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Cache triggered.json
+        uses: actions/cache@v4
+        with:
+          path: triggered.json
+          key: triggered-${{ runner.os }}-${{ hashFiles('triggered.json') }}
+          restore-keys: |
+            triggered-${{ runner.os }}-
 
       - name: Set up Python
         uses: actions/setup-python@v5
