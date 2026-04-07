@@ -15,7 +15,6 @@ jobs:
     permissions:
       contents: read
     env:
-      env:
   NTFY_TOPIC: bevan-rotation-alerts
   NTFY_SERVER: https://ntfy.sh
     steps:
