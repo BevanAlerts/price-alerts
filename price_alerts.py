@@ -196,7 +196,7 @@ def run():
             (direction == "below" and price <= level)
         )
 
-        if true:
+        if True:
             print(f"TRIGGERED: {ticker} {direction} ${level:.2f}")
             send_ntfy(ticker, price, level, direction, note)
             triggered[key] = {
