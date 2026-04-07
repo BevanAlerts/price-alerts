@@ -37,4 +37,4 @@ jobs:
           git fetch origin main
           git add triggered.json
           git diff --staged --quiet || git commit -m "Update triggered alerts state"
-          git push origin HEAD:main
+          git push origin HEAD:main --force-with-lease
