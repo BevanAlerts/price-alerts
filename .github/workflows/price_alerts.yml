@@ -12,11 +12,14 @@ concurrency:
 jobs:
   check-prices:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
+
     env:
-  NTFY_TOPIC: bevan-rotation-alerts
-  NTFY_SERVER: https://ntfy.sh
+      NTFY_TOPIC: bevan-rotation-alerts
+      NTFY_SERVER: https://ntfy.sh
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
