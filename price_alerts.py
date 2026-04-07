@@ -1,6 +1,6 @@
 """
-Price Alert Script for GitHub Actions - Final Version
-Monitors watchlist.csv and sends Ntfy push notifications when price levels are crossed.
+Price Alert Script for GitHub Actions
+Monitors watchlist.csv and sends ntfy push notifications when price levels are crossed.
 Uses triggered.json to ensure each alert only fires once per trading day.
 """
 
@@ -8,32 +8,43 @@ import csv
 import json
 import os
 import sys
+import time
+import requests
 from datetime import datetime, timezone, date
 
 NTFY_TOPIC     = "bevan-rotation-alerts"
 NTFY_SERVER    = "https://ntfy.sh"
 WATCHLIST_FILE = "watchlist.csv"
 TRIGGERED_FILE = "triggered.json"
+
 US_MARKET_HOLIDAYS_2026 = {
-    date(2026, 1, 1),
-    date(2026, 1, 19),
-    date(2026, 2, 16),
-    date(2026, 4, 3),
-    date(2026, 5, 25),
-    date(2026, 7, 3),
-    date(2026, 9, 7),
-    date(2026, 11, 26),
-    date(2026, 12, 25),
+    date(2026, 1,  1),   # New Year's Day
+    date(2026, 1, 19),   # MLK Day
+    date(2026, 2, 16),   # Presidents Day
+    date(2026, 4,  3),   # Good Friday
+    date(2026, 5, 25),   # Memorial Day
+    date(2026, 7,  3),   # Independence Day (observed)
+    date(2026, 9,  7),   # Labor Day
+    date(2026, 11, 26),  # Thanksgiving
+    date(2026, 12, 25),  # Christmas
 }
 
-today = date.today()
-if today in US_MARKET_HOLIDAYS_2026:
-    print(f"Market holiday today ({today}). Skipping.")
-    sys.exit(0)
-    
+# UTC market window (EDT):
+# Pre-market open:  4:00am ET = 08:00 UTC
+# Post-market close: 8:00pm ET = 00:00 UTC next day
 MARKET_START_UTC = 8
-MARKET_END_UTC   = 1
+MARKET_END_UTC   = 1  # exclusive upper bound (midnight hour)
 
+
+# ── Holiday check ────────────────────────────────────────────────────────────
+
+today_date = date.today()
+if today_date in US_MARKET_HOLIDAYS_2026:
+    print(f"Market holiday today ({today_date}). Skipping.")
+    sys.exit(0)
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 def is_market_hours():
     hour = datetime.now(timezone.utc).hour
@@ -97,19 +108,38 @@ def reset_if_new_day(triggered):
     return triggered
 
 
-def get_price(ticker):
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=1d"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode())
-            meta = data["chart"]["result"][0]["meta"]
-            price = meta.get("regularMarketPrice") or meta.get("previousClose")
-            return float(price) if price else None
-    except Exception as e:
-        print(f"  ERROR fetching {ticker}: {e}")
-        return None
+# ── Price fetch with retries ─────────────────────────────────────────────────
 
+def get_price(ticker, retries=3, delay=2):
+    url     = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=1d"
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    for attempt in range(1, retries + 1):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}")
+
+            data  = response.json()
+            meta  = data["chart"]["result"][0]["meta"]
+            price = meta.get("regularMarketPrice") or meta.get("previousClose")
+
+            if price:
+                return float(price)
+
+            raise Exception("Price not found in response")
+
+        except Exception as e:
+            print(f"  Attempt {attempt} failed for {ticker}: {e}")
+            if attempt < retries:
+                time.sleep(delay)
+
+    print(f"  FINAL FAIL: Could not fetch price for {ticker} after {retries} attempts.")
+    return None
+
+
+# ── ntfy notification ────────────────────────────────────────────────────────
 
 def send_ntfy(ticker, price, level, direction, note):
     arrow   = "up" if direction == "above" else "down"
@@ -121,19 +151,23 @@ def send_ntfy(ticker, price, level, direction, note):
     body += f"\nTime: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
 
     url = f"{NTFY_SERVER}/{NTFY_TOPIC}"
-    req = urllib.request.Request(
-        url, data=body.encode("utf-8"), method="POST",
-        headers={"Title": title, "Priority": "high"}
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            if resp.status == 200:
-                print(f"  SENT: {title}")
-            else:
-                print(f"  Ntfy returned status {resp.status}")
-    except Exception as e:
-        print(f"  ERROR sending Ntfy: {e}")
 
+    try:
+        response = requests.post(
+            url,
+            data=body.encode("utf-8"),
+            headers={"Title": title, "Priority": "high"},
+            timeout=10
+        )
+        if response.status_code == 200:
+            print(f"  SENT: {title}")
+        else:
+            print(f"  Ntfy returned status {response.status_code}")
+    except Exception as e:
+        print(f"  ERROR sending ntfy notification: {e}")
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
 
 def run():
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -169,7 +203,7 @@ def run():
 
         price = get_price(ticker)
         if price is None:
-            print(f"  {ticker} - could not fetch price.")
+            print(f"  {ticker} - skipped (price fetch failed after retries).")
             continue
 
         print(f"  {ticker}: ${price:.2f} | alert ${level:.2f} {direction}")
